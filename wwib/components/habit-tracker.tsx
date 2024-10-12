@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Heart, Brain, Dumbbell, Book, Users, ArrowRight } from 'lucide-react'
+import { Loader2, Heart, Brain, Dumbbell, Book, Users, ArrowRight, Moon, Cigarette, Target, Smile, Droplet, Wine, Smartphone, Utensils } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,11 +14,17 @@ import finalPixelImage from '@/assets/final_pixel.png'
 export const SERVER_URL = 'https://3c61-91-167-190-195.ngrok-free.app/';
 
 const categories = [
-  { name: 'Health', icon: Heart },
-  { name: 'Mental', icon: Brain },
-  { name: 'Fitness', icon: Dumbbell },
-  { name: 'Learning', icon: Book },
-  { name: 'Social', icon: Users },
+  { name: 'Sleep', icon: Moon },
+  { name: 'Diet', icon: Utensils },
+  { name: 'Exercise', icon: Dumbbell },
+  { name: 'Smoking', icon: Cigarette },
+  { name: 'Alcohol', icon: Wine },
+  { name: 'Social relationships', icon: Users },
+  { name: 'Mental health', icon: Brain },
+  { name: 'Motivation', icon: Target },
+  { name: 'Hydration', icon: Droplet },
+  { name: 'Stress management', icon: Smile },
+  { name: 'Screen time', icon: Smartphone },
 ]
 
 const GAME_HEIGHT = 200;
@@ -340,18 +346,18 @@ export function HabitTrackerComponent() {
       <div className="min-h-screen bg-gray-100 p-4">
         <h2 className="text-2xl font-bold mb-4">AI Recommendations</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map(category => (
-            <Card key={category.name}>
+          {Object.entries(recommendations).map(([category, actions]) => (
+            <Card key={category}>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  {React.createElement(category.icon, { className: "mr-2" })}
-                  {category.name}
+                  {React.createElement(categories.find(c => c.name === category)?.icon || Heart, { className: "mr-2" })}
+                  {category}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc pl-5">
-                  {recommendations[category.name]?.map((recommendation: string, index: number) => (
-                    <li key={index}>{recommendation}</li>
+                  {Object.values(actions).map((action, index) => (
+                    <li key={index}>{action}</li>
                   ))}
                 </ul>
               </CardContent>
