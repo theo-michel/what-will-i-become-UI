@@ -78,19 +78,19 @@ export function HabitTrackerComponent() {
           user_query: allHabits
         }),
         mode: 'cors',
-        credentials: 'include',
       });
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      setRecommendations(data.recommendations);
+
+      setRecommendations(data.program);
+      console.log('Generated recommendations:', data.program);
+      setLoading(false);
     } catch (error) {
       console.error('Error generating recommendations:', error);
       // You might want to set an error state here and display it to the user
-    } finally {
       setLoading(false);
     }
   };
@@ -390,6 +390,7 @@ export function HabitTrackerComponent() {
               className="w-full" 
               onClick={(e) => {
                 e.preventDefault(); // Prevent form submission
+                console.log("Generating recommendations");
                 generateRecommendations();
               }}
               disabled={loading}
