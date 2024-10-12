@@ -44,6 +44,7 @@ const DinoSprite = ({ isJumping }: { isJumping: boolean }) => (
 
 export function HabitTrackerComponent() {
   const [habits, setHabits] = useState({})
+  const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<Record<string, string[]> | null>(null)
   const [simulating, setSimulating] = useState(false)
@@ -216,6 +217,59 @@ export function HabitTrackerComponent() {
                 />
               </div>
               <p className="text-center">This version of you followed the recommended habits consistently.</p>
+              <div className="flex justify-center">
+                <Button className="mt-8" onClick={() => {
+                  // Call the summarize endpoint
+                  fetch(SERVER_URL + '/summarize-states', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      "actions": [
+                        {
+                          "Alcohol": "I do not have any information on that category",
+                          "Diet": "I start replacing some of my processed meals with whole food options, like adding a salad to my dinner or having fruit for a snack.",
+                          "Exercise": "I continue going to the gym 3 times a week and add one short run to my weekly routine.",
+                          "Hydration": "I continue drinking plenty of water throughout the day.",
+                          "Mental health": "I try a short mindfulness exercise, like a 5-minute guided meditation, a few times this week.",
+                          "Motivation": "none",
+                          "Screen time": "I do not have any information on that category",
+                          "Sleep": "I maintain my current sleep schedule of 10 p.m. to 6 a.m.",
+                          "Smoking": "I do not have any information on that category",
+                          "Social relationships": "I do not have any information on that category",
+                          "Stress management": "none"
+                        },
+                        {
+                          "Alcohol": "I do not have any information on that category",
+                          "Diet": "I continue to incorporate more whole foods into my diet alongside some processed meals.",
+                          "Exercise": "I continue my routine of three gym sessions and one short run per week.",
+                          "Hydration": "I drink plenty of water daily.",
+                          "Mental health": "I practice short mindfulness exercises a few times a week.",
+                          "Motivation": "I maintain my motivation to continue these positive changes.",
+                          "Screen time": "I do not have any information on that category",
+                          "Sleep": "I maintain a consistent sleep schedule of 10 p.m. to 6 a.m.",
+                          "Smoking": "I do not have any information on that category",
+                          "Social relationships": "I do not have any information on that category",
+                          "Stress management": "I do not have any information on that category"
+                        }
+                      ],
+                      "category": "program",
+                      "states": [
+                        "I maintain good overall hygiene. I continue to prioritize hydration, drinking plenty of water daily. My sleep schedule remains consistent, sleeping from 10 p.m. to 6 a.m., which allows me to feel quite well-rested.  I now incorporate a short run once a week in addition to my three gym sessions.  I am beginning to incorporate more whole foods into my diet, alongside some processed meals. I've also started practicing short mindfulness exercises a few times a week.  I'm motivated to continue these positive changes.\n",
+                        "I maintain good overall hygiene. I prioritize hydration, drinking plenty of water daily. My sleep schedule remains consistent, sleeping from 10 p.m. to 6 a.m., which allows me to feel well-rested. I incorporate a short run once a week in addition to my three gym sessions. I continue to incorporate more whole foods into my diet, alongside some processed meals.  I practice short mindfulness exercises a few times a week. I remain motivated to continue these positive changes.\n"
+                      ]
+                    }),
+                  })
+                    .then(response => response.text())
+                    .then(summary => {
+                      // Store the summary in a state variable
+                      setSummary(summary);
+                    })
+                    .catch(error => {
+                      console.error('Error:', error);
+                    });
+                }}>
+                  Summarize your journey
+                </Button>
+              </div>
             </CardContent>
           </Card>
           <Card className="flex-1">
