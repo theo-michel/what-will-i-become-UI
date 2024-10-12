@@ -1,15 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { ForwardRefExoticComponent, RefAttributes, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sun, Moon, Utensils, Heart, Book, Video } from "lucide-react"
+import { Sun, Moon, Utensils, Heart, Book, Video, LucideProps } from "lucide-react"
+
+interface Recommendation {
+  icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
+  text: string;
+}
 
 export function HabitTrackerComponent() {
   const [habits, setHabits] = useState("")
   const [currentStep, setCurrentStep] = useState(1)
-  const [recommendations, setRecommendations] = useState([])
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [isSimulating, setIsSimulating] = useState(false)
 
   const generateRecommendations = () => {
