@@ -10,6 +10,16 @@ import React from 'react'
 import Image from 'next/image'
 import finalPixelImage from '@/assets/final_pixel.png'
 
+// Import obstacle images
+import obstacle0 from '@/assets/obstacle_0.png'
+import obstacle1 from '@/assets/obstacle_1.png'
+import obstacle2 from '@/assets/obstacle_2.png'
+// ... import more obstacle images as needed
+import defaultObstacle from '@/assets/obstacle_0.png'
+
+// Create an array of obstacle images
+const obstacleImages = [obstacle0, obstacle1, obstacle2, /* ... add more obstacles */];
+
 // Server URL constant
 export const SERVER_URL = 'https://3c61-91-167-190-195.ngrok-free.app/';
 
@@ -35,6 +45,10 @@ const CACTUS_WIDTH = 20;
 const CACTUS_HEIGHT = 40;
 const JUMP_HEIGHT = 100;
 
+// Add this constant for obstacle dimensions
+const OBSTACLE_WIDTH = 40;
+const OBSTACLE_HEIGHT = 40;
+
 import DiploSVG from '@/assets/diplodocus.svg';
 
 const DinoSprite = ({ isJumping }: { isJumping: boolean }) => (
@@ -48,11 +62,18 @@ const DinoSprite = ({ isJumping }: { isJumping: boolean }) => (
   </div>
 );
 
+interface SimulationResults {
+  life_simulation: {
+    actions: Array<Record<string, string>>;
+    states: string[];
+  };
+}
+
 export function HabitTrackerComponent() {
   const [habits, setHabits] = useState({})
   const [loading, setLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<Record<string, string[]> | null>(null)
-  const [simulating, setSimulating] = useState(false)
+  const [simulating, setSimulating] = useState(false) 
   const [showingResults, setShowingResults] = useState(false)
   const [dogImage, setDogImage] = useState('')
   const [goodImage, setGoodImage] = useState('')
@@ -61,7 +82,10 @@ export function HabitTrackerComponent() {
   const [isJumping, setIsJumping] = useState(false);
   const [cactusX, setCactusX] = useState(GAME_WIDTH);
   const [score, setScore] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
+  const [simulationResults, setSimulationResults] = useState(null);
+  const [currentStateIndex, setCurrentStateIndex] = useState(0);
+  const [isColliding, setIsColliding] = useState(false);
+  const [currentObstacleIndex, setCurrentObstacleIndex] = useState(0);
 
   const handleInputChange = (category: string, value: string) => {
     setHabits(prev => ({ ...prev, [category]: value }))
@@ -93,10 +117,33 @@ export function HabitTrackerComponent() {
 
       setRecommendations(data.program);
       console.log('Generated recommendations:', data.program);
+
+      // Call the simulate_life endpoint
+      const simulationResponse = await fetch(`${SERVER_URL}simulate-life`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          initial_state: allHabits,
+          program: JSON.stringify(data.program),
+          time_horizon: 1 // You can adjust this value as needed
+        }),
+        mode: 'cors',
+      });
+      if (!simulationResponse.ok) {
+        throw new Error(`HTTP error! status: ${simulationResponse.status}`);
+      }
+
+      const simulationData = await simulationResponse.json();
+      setSimulationResults(simulationData);
+      
+      console.log('Simulation results:', simulationData);
+
       setLoading(false);
     } catch (error) {
-      console.error('Error generating recommendations:', error);
-      // You might want to set an error state here and display it to the user
+      console.error('Error generating recommendations or simulating life:', error);
       setLoading(false);
     }
   };
@@ -139,11 +186,11 @@ export function HabitTrackerComponent() {
   }
 
   const jump = useCallback(() => {
-    if (!isJumping && !gameOver) {
+    if (!isJumping) {
       setIsJumping(true);
       setTimeout(() => setIsJumping(false), 500);
     }
-  }, [isJumping, gameOver]);
+  }, [isJumping]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -156,7 +203,7 @@ export function HabitTrackerComponent() {
   }, [jump]);
 
   useEffect(() => {
-    if (simulating && !showingResults && !gameOver) {
+    if (simulating && !showingResults && simulationResults?.life_simulation) {
       const gameLoop = setInterval(() => {
         setCactusX((prev) => {
           if (prev <= -CACTUS_WIDTH) {
@@ -180,21 +227,30 @@ export function HabitTrackerComponent() {
           cactusX + CACTUS_WIDTH > 0 &&
           dinoY + DINO_HEIGHT > GAME_HEIGHT - CACTUS_HEIGHT
         ) {
-          setGameOver(true);
-          clearInterval(gameLoop);
+          if (!isColliding) {
+            setIsColliding(true);
+            setTimeout(() => setIsColliding(false), 1000); // Pause for 1 second
+          }
+        }
+
+        // Update current state index to change obstacle
+        if (!isColliding) {
+          setCurrentStateIndex((prevIndex) => {
+            const nextIndex = prevIndex + 1;
+            if (nextIndex < simulationResults.life_simulation.states.length) {
+              setCurrentObstacleIndex(nextIndex % obstacleImages.length);
+              return nextIndex;
+            } else {
+              clearInterval(gameLoop);
+              return prevIndex;
+            }
+          });
         }
       }, 1000 / 60);
 
       return () => clearInterval(gameLoop);
     }
-  }, [simulating, showingResults, gameOver, cactusX, dinoY, isJumping, score]);
-
-  const restartGame = () => {
-    setDinoY(GAME_HEIGHT - DINO_HEIGHT);
-    setCactusX(GAME_WIDTH);
-    setScore(0);
-    setGameOver(false);
-  };
+  }, [simulating, showingResults, cactusX, dinoY, isJumping, score, simulationResults, isColliding]);
 
   useEffect(() => {
     if (showingResults) {
@@ -279,27 +335,41 @@ export function HabitTrackerComponent() {
             >
               {/* Dino */}
               <div
-                className="absolute"
+                className={`absolute ${isColliding ? 'opacity-50' : ''}`}
                 style={{
                   width: DINO_WIDTH,
                   height: DINO_HEIGHT,
                   bottom: dinoY - (GAME_HEIGHT - DINO_HEIGHT),
                   left: 20,
+                  transition: isColliding ? 'opacity 0.2s' : 'none',
                 }}
               >
-                <DinoSprite isJumping={isJumping} />
+                <Image
+                  src={finalPixelImage}
+                  alt="Character"
+                  layout="fill"
+                  objectFit="contain"
+                  className={isJumping ? 'animate-jump' : ''}
+                />
               </div>
 
-              {/* Cactus */}
+              {/* Updated Obstacle */}
               <div
-                className="absolute bg-green-700"
+                className="absolute"
                 style={{
-                  width: CACTUS_WIDTH,
-                  height: CACTUS_HEIGHT,
+                  width: OBSTACLE_WIDTH,
+                  height: OBSTACLE_HEIGHT,
                   bottom: 0,
                   left: cactusX,
                 }}
-              />
+              >
+                <Image
+                  src={obstacleImages[currentObstacleIndex] || defaultObstacle}
+                  alt="Obstacle"
+                  layout="fill"
+                  objectFit="contain"
+                />
+              </div>
 
               {/* Ground */}
               <div className="absolute bottom-0 w-full h-1 bg-black" />
@@ -308,28 +378,14 @@ export function HabitTrackerComponent() {
               <div className="absolute top-2 right-2 text-xl font-bold">
                 Score: {score}
               </div>
-
-              {/* Game Over Screen */}
-              {gameOver && (
-                <div className="absolute inset-0 bg-white bg-opacity-80 flex flex-col items-center justify-center">
-                  <h2 className="text-3xl font-bold mb-4">Game Over</h2>
-                  <p className="text-xl mb-4">Final Score: {score}</p>
-                  <button
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    onClick={restartGame}
-                  >
-                    Restart
-                  </button>
-                </div>
-              )}
             </div>
           </div>
           <div className="text-center">
             <p className="text-sm" aria-live="polite">
-              Score: {score}
+              State: {simulationResults?.life_simulation?.states[currentStateIndex] ?? 'Loading...'}
             </p>
             <p className="text-sm mt-2" aria-live="polite">
-              {gameOver ? 'Game Over!' : 'Jump with spacebar or click'}
+              {isColliding ? 'Oops! Collision!' : 'Jump with spacebar or click'}
             </p>
           </div>
         </div>
@@ -364,6 +420,33 @@ export function HabitTrackerComponent() {
             </Card>
           ))}
         </div>
+        {simulationResults && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Simulation Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-bold mb-2">Life Simulation</h3>
+                  <p>{simulationResults.life_simulation.states[0]}</p>
+                </div>
+                {simulationResults.life_simulation.actions[0] && (
+                  <div>
+                    <h3 className="font-bold mb-2">Actions Taken</h3>
+                    <ul className="list-disc pl-5">
+                      {Object.entries(simulationResults.life_simulation.actions[0]).map(([category, action]) => (
+                        <li key={category}>
+                          <span className="font-semibold">{category}:</span> {action}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <Button className="mt-4" onClick={startSimulation}>Simulate</Button>
       </div>
     )
