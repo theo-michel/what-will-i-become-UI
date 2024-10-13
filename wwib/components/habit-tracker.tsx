@@ -21,7 +21,7 @@ import defaultObstacle from '@/assets/obstacle_0.png'
 const obstacleImages = [obstacle0, obstacle1, obstacle2, /* ... add more obstacles */];
 
 // Server URL constant
-export const SERVER_URL = 'https://3c61-91-167-190-195.ngrok-free.app/';
+export const SERVER_URL = 'https://326a-91-167-190-195.ngrok-free.app/';
 
 const categories = [
   { name: 'Sleep', icon: Moon },
@@ -217,7 +217,7 @@ export function HabitTrackerComponent() {
 
         setDinoY((prev) => {
           if (isJumping) {
-            return Math.max(prev - 10, GAME_HEIGHT - DINO_HEIGHT - JUMP_HEIGHT);
+            return Math.max(prev + 10, GAME_HEIGHT - DINO_HEIGHT - JUMP_HEIGHT);
           } else {
             return Math.min(prev + 10, GAME_HEIGHT - DINO_HEIGHT);
           }
