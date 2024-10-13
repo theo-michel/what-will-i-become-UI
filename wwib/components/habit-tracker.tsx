@@ -71,6 +71,8 @@ interface SimulationResults {
 
 export function HabitTrackerComponent() {
   const [habits, setHabits] = useState({})
+  let [summaryGood, setSummaryGood] = useState('');
+  let [summaryBad, setSummaryBad] = useState('');
   const [loading, setLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<Record<string, string[]> | null>(null)
   const [simulating, setSimulating] = useState(false) 
@@ -278,6 +280,106 @@ export function HabitTrackerComponent() {
                 />
               </div>
               <p className="text-center">This version of you followed the recommended habits consistently.</p>
+              <div className="flex flex-col items-center">
+                <Button 
+                  className={`mt-8 ${loading ? 'opacity-50' : ''}`} 
+                  onClick={() => {
+                    if (summaryGood) return; // Prevent multiple clicks
+                    setLoading(true);
+
+                    fetch(SERVER_URL + 'summarize-states', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        actions: [
+                          {
+                            "Alcohol": "I do not have any information on that category",
+                            "Diet": "I start replacing some of my processed meals with whole food options, like adding a salad to my dinner or having fruit for a snack.",
+                            "Exercise": "I continue going to the gym 3 times a week and add one short run to my weekly routine.",
+                            "Hydration": "I continue drinking plenty of water throughout the day.",
+                            "Mental health": "I try a short mindfulness exercise, like a 5-minute guided meditation, a few times this week.",
+                            "Motivation": "none",
+                            "Screen time": "I do not have any information on that category",
+                            "Sleep": "I maintain my current sleep schedule of 10 p.m. to 6 a.m.",
+                            "Smoking": "I do not have any information on that category",
+                            "Social relationships": "I do not have any information on that category",
+                            "Stress management": "none"
+                          },
+                          {
+                            "Alcohol": "I do not have any information on that category",
+                            "Diet": "I continue to incorporate more whole foods into my diet alongside some processed meals.",
+                            "Exercise": "I continue my routine of three gym sessions and one short run per week.",
+                            "Hydration": "I drink plenty of water daily.",
+                            "Mental health": "I practice short mindfulness exercises a few times a week.",
+                            "Motivation": "I maintain my motivation to continue these positive changes.",
+                            "Screen time": "I do not have any information on that category",
+                            "Sleep": "I maintain a consistent sleep schedule of 10 p.m. to 6 a.m.",
+                            "Smoking": "I do not have any information on that category",
+                            "Social relationships": "I do not have any information on that category",
+                            "Stress management": "I do not have any information on that category"
+                          }
+                        ],
+                        category: "program",
+                        states: [
+                          "I maintain good overall hygiene. I continue to prioritize hydration, drinking plenty of water daily. My sleep schedule remains consistent, sleeping from 10 p.m. to 6 a.m., which allows me to feel quite well-rested.  I now incorporate a short run once a week in addition to my three gym sessions.  I am beginning to incorporate more whole foods into my diet, alongside some processed meals. I've also started practicing short mindfulness exercises a few times a week.  I'm motivated to continue these positive changes.\n",
+                          "I maintain good overall hygiene. I prioritize hydration, drinking plenty of water daily. My sleep schedule remains consistent, sleeping from 10 p.m. to 6 a.m., which allows me to feel well-rested. I incorporate a short run once a week in addition to my three gym sessions. I continue to incorporate more whole foods into my diet, alongside some processed meals.  I practice short mindfulness exercises a few times a week. I remain motivated to continue these positive changes.\n"
+                        ]
+                      }),
+                    })
+                      .then(response => response.json())
+                      .then(data => {
+                        setSummaryGood(data.summary);
+                        console.log(data.summary);
+                        
+                        return fetch(`${SERVER_URL}text-to-speech`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            gender: 'M',
+                            text: data.summary
+                          }),
+                        });
+                      })
+                      .then(response => response.json())
+                      .then(data => {
+                        const audioContent = data.audio_content;
+                        const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                        setLoading(false);
+                      })
+                      .catch(error => {
+                        console.error('Error:', error);
+                        setLoading(false);
+                      });
+                  }}
+                  disabled={loading || !!summaryGood}
+                >
+                  {loading ? (
+                    <span className="inline-flex items-center">
+                      <span className="animate-pulse">generating your summary</span>
+                      <span className="animate-pulse delay-75">.</span>
+                      <span className="animate-pulse delay-150">.</span>
+                      <span className="animate-pulse delay-300">.</span>
+                    </span>
+                  ) : summaryGood ? (
+                    'Summary Generated'
+                  ) : (
+                    'Summarize your journey'
+                  )}
+                </Button>
+                
+              {summaryGood && (
+                  <div className="mt-4 p-4 bg-white rounded-lg shadow w-full">
+                    <p>{summaryGood}</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
           <Card className="flex-1">
@@ -293,6 +395,119 @@ export function HabitTrackerComponent() {
                 />
               </div>
               <p className="text-center">This version of you didn't follow the recommended habits.</p>
+              <div className="flex flex-col items-center">
+                <Button 
+                  className={`mt-8 ${loading ? 'opacity-50' : ''}`} 
+                  onClick={() => {
+                    if (summaryBad) return; // Prevent multiple clicks
+                    setLoading(true);
+
+                    fetch(SERVER_URL + 'summarize-states', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        actions: [
+                          {
+                            "Alcohol": "I do not have any information on that category",
+                            "Diet": "I start replacing some of my processed meals with whole food options, like adding a salad to my dinner or having fruit for a snack.",
+                            "Exercise": "I continue going to the gym 3 times a week and add one short run to my weekly routine.",
+                            "Hydration": "I continue drinking plenty of water throughout the day.",
+                            "Mental health": "I try a short mindfulness exercise, like a 5-minute guided meditation, a few times this week.",
+                            "Motivation": "none",
+                            "Screen time": "I do not have any information on that category",
+                            "Sleep": "I maintain my current sleep schedule of 10 p.m. to 6 a.m.",
+                            "Smoking": "I do not have any information on that category",
+                            "Social relationships": "I do not have any information on that category",
+                            "Stress management": "none"
+                          },
+                          {
+                            "Alcohol": "I do not have any information on that category",
+                            "Diet": "I continue to incorporate more whole foods into my diet alongside some processed meals.",
+                            "Exercise": "I continue my routine of three gym sessions and one short run per week.",
+                            "Hydration": "I drink plenty of water daily.",
+                            "Mental health": "I practice short mindfulness exercises a few times a week.",
+                            "Motivation": "I maintain my motivation to continue these positive changes.",
+                            "Screen time": "I do not have any information on that category",
+                            "Sleep": "I maintain a consistent sleep schedule of 10 p.m. to 6 a.m.",
+                            "Smoking": "I do not have any information on that category",
+                            "Social relationships": "I do not have any information on that category",
+                            "Stress management": "I do not have any information on that category"
+                          }
+                        ],
+                        category: "habits",
+                        states: [
+                          "I maintain good overall hygiene. I continue to prioritize hydration, drinking plenty of water daily. My sleep schedule remains consistent, sleeping from 10 p.m. to 6 a.m., which allows me to feel quite well-rested.  I now incorporate a short run once a week in addition to my three gym sessions.  I am beginning to incorporate more whole foods into my diet, alongside some processed meals. I've also started practicing short mindfulness exercises a few times a week.  I'm motivated to continue these positive changes.\n",
+                          "I maintain good overall hygiene. I prioritize hydration, drinking plenty of water daily. My sleep schedule remains consistent, sleeping from 10 p.m. to 6 a.m., which allows me to feel well-rested. I incorporate a short run once a week in addition to my three gym sessions. I continue to incorporate more whole foods into my diet, alongside some processed meals.  I practice short mindfulness exercises a few times a week. I remain motivated to continue these positive changes.\n"
+                        ]
+                      }),
+                    })
+                      .then(response => response.json())
+                      .then(data => {
+                        const summaryBad = data.summary;
+                        setSummaryBad(summaryBad);
+                        console.log(summaryBad);
+                        
+                        return fetch(`${SERVER_URL}text-to-speech`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            gender: 'M',
+                            text: summaryBad
+                          }),
+                        });
+                      })
+                      .then(response => response.json())
+                      .then(data => {
+                        const audioContent = data.audio_content;
+                        const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                        setLoading(false);
+                        
+                        // Start streaming the summary
+                        let index = 0;
+                        const streamInterval = setInterval(() => {
+                          if (index < summaryBad.length) {
+                            setSummaryBad(prevSummary => prevSummary + summaryBad[index]);
+                            index++;
+                          } else {
+                            clearInterval(streamInterval);
+                          }
+                        }, 50); // Adjust the interval for faster/slower streaming
+                      })
+                      .catch(error => {
+                        console.error('Error:', error);
+                        setLoading(false);
+                      });
+                  }}
+                  disabled={loading || !!summaryBad}
+                >
+                  {loading ? (
+                    <span className="inline-flex items-center">
+                      <span className="animate-pulse">generating your summary</span>
+                      <span className="animate-pulse delay-75">.</span>
+                      <span className="animate-pulse delay-150">.</span>
+                      <span className="animate-pulse delay-300">.</span>
+                    </span>
+                  ) : summaryBad ? (
+                    'Summary Generated'
+                  ) : (
+                    'Summarize your journey'
+                  )}
+                </Button>
+                
+                {summaryBad && (
+                  <div className="mt-4 p-4 bg-white rounded-lg shadow w-full">
+                    <p>{summaryBad}</p>
+                  </div>
+                )}
+              </div>
+
             </CardContent>
           </Card>
         </div>
